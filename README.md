@@ -25,6 +25,11 @@ which holds only these.
   `<semver>+<commit>`, with `.dirty` when tracked files have changed.
 - Line coverage (`cmake/PondLineCoverage.cmake`, `LineCoverage/`): counts which lines of an
   app's own code run in normal use, to find features nobody uses.
+- `PondCrashReports` (`<PondCrashReports/CrashReports.h>`, namespace `pondcrashreports`,
+  `cmake/PondCrashReports.cmake`): crash reports written by
+  [Crashout](https://github.com/jamierpond/Crashout) into the app's pond data folder,
+  the `--crash-for-testing <fault>` flag, and `crash-reports.py`, which lists the
+  reports on this machine and others.
 
 ## Adding PondDev to an app
 
@@ -88,6 +93,76 @@ $coverage reset           # delete the counts and kept programs
 
 `just coverage-check` here builds PondDev's own tests with coverage and prints
 their report, which shows the pipeline works.
+
+## Crash reports
+
+When a program crashes or hangs, Crashout's handler process, which is the
+program's own executable started again, writes a report to
+`<pond data folder>/<App>/Crashes/<program>/pending/<id>/`. The program is the
+executable's own name, so an app with a daemon (CowTerm and CowTermDaemon) keeps
+one folder each. Reports from before PondDev, in `<app support>/<program>/Crashes`,
+move there on the first start. Crashout has a handler on macOS and Windows; on
+Linux the same calls build and do nothing.
+
+In the app's `CMakeLists.txt`, for each executable that reports crashes:
+
+```cmake
+pond_enable_crash_reports(MyApp)
+```
+
+This links `PondCrashReports` and, on macOS and Windows, copies the symbols
+into `<build>/symbols` and, on Windows, Crashout's Windows Error Reporting
+helper beside the executable. PondDev fetches Crashout unless the app already
+added it.
+
+In `main`, the first call returns at once unless this process is the crash
+handler, whose whole life it is. The second starts the handler; call it once
+this process is known to be the one that keeps running, after a second launch
+has handed over to the first and after any quick command that prints and exits:
+
+```cpp
+#include <PondCrashReports/CrashReports.h>
+#include <PondVersion.h>
+
+int main(int argc, char* argv[])
+{
+    if (auto exitCode = pondcrashreports::runCrashHandlerIfRequested(argc, argv))
+        return *exitCode;
+
+    // ... a second launch hands over and returns here ...
+
+    pondcrashreports::startCrashReports(
+        {.appName = "MyApp", .release = pond::getVersionString()}, argc, argv);
+    // ...
+}
+```
+
+`startCrashReports` also handles `MyApp --crash-for-testing <fault>`, which
+crashes on purpose with one of Crashout's faults (`nullptr`, `abort`,
+`stackoverflow`, ...) to check a report end to end. An unknown fault prints the
+fault names and exits with code 2. An app that parses its own arguments takes
+the flag out with `getArgumentsWithoutCrashForTesting`.
+
+Starting crash reports adds about 10 ms to a program's start on an M-series Mac
+(`just measure-crash-reports-start-time` measures it with a small program; a
+larger executable takes longer, since the handler is that executable started
+again). The handler ends with the program, so a command whose output is piped
+or captured with `$(...)` returns as soon as the program does.
+
+Configure copies `crash-reports.py` into `<build>/PondCrashReports`. The app's
+justfile gives it a `crash-reports` recipe, the name the script's mark-fixed
+lines use:
+
+```just
+[doc('List the crash reports nobody has marked fixed here and on other machines (list [HOST ...]), or mark one fixed (mark-fixed HOST ID)')]
+crash-reports *arguments:
+    python3 build/PondCrashReports/crash-reports.py --app MyApp {{arguments}}
+```
+
+`list big-cow jamiepond@tamby` reads each host over ssh (`local` is this
+machine, the default). An app whose programs wrote reports before PondDev under
+other names passes each with `--program` (`--program CowTerm --program
+CowTermDaemon`), so those are still found on machines that have not updated yet.
 
 ## Apps that use it
 

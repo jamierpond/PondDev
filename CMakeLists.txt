@@ -15,6 +15,9 @@ include(${CMAKE_CURRENT_LIST_DIR}/cmake/PondVersion.cmake)
 # pond_add_line_coverage_counters and pond_write_line_coverage.
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/PondLineCoverage.cmake)
 
+# pond_enable_crash_reports.
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/PondCrashReports.cmake)
+
 if (APPLE)
     enable_language(OBJCXX)
 endif ()
@@ -48,6 +51,17 @@ if (NOT TARGET VimEditor)
     lockstep_add_package(
             NAME text-buffer
             GITHUB_REPOSITORY jamierpond/text-buffer
+            GIT_TAG main
+            SYSTEM YES)
+endif ()
+
+# Crash reports (Crashout), which PondCrashReports starts. An app that already
+# added Crashout keeps its own. Work against a local checkout with:
+#   cmake -B build -DLOCKSTEP_Crashout_SOURCE=$HOME/projects/Crashout
+if (NOT TARGET eacp-crash-report)
+    lockstep_add_package(
+            NAME Crashout
+            GITHUB_REPOSITORY jamierpond/Crashout
             GIT_TAG main
             SYSTEM YES)
 endif ()
@@ -91,6 +105,7 @@ target_include_directories(SessionLog PUBLIC Lib)
 target_compile_features(SessionLog PUBLIC cxx_std_20)
 
 add_subdirectory(Lib/PondApp)
+add_subdirectory(Lib/PondCrashReports)
 add_subdirectory(Lib/PermissionsPanel)
 
 if (PROJECT_IS_TOP_LEVEL)

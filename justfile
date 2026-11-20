@@ -37,6 +37,11 @@ format:
 coverage-check:
     scripts/check-line-coverage.sh build-coverage
 
+[doc('Time a program that starts crash reports and exits against one that does not (needs hyperfine)')]
+[unix]
+measure-crash-reports-start-time: build
+    scripts/measure-crash-reports-start-time.sh {{build_dir}}
+
 [doc('Delete the build directories')]
 clean:
     cmake -E rm -rf {{build_dir}} build-coverage
