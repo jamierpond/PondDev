@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS arm64
+            os: macos-latest
+          - name: Windows x64
+            os: windows-latest
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    env:
+      LOCKSTEP_CACHE: ${{ github.workspace }}/.lockstep-cache
+    steps:
+      - uses: actions/checkout@v4
+
+      # lockstep's cache holds the package sources, so a run with an unchanged
+      # lock downloads none of them again. With a lockstep that has the library
+      # cache (after 0.4.3) it also holds the compiled package libraries, except
+      # Windows Debug ones, whose debug information sits in .pdb files.
+      - uses: actions/cache/restore@v4
+        id: lockstep-cache
+        with:
+          path: .lockstep-cache
+          key: lockstep-${{ matrix.os }}-${{ hashFiles('lockstep.lock', 'cmake/lockstep.cmake') }}
+
+      - uses: extractions/setup-just@v2
+
+      # ccache on macOS only: a Windows Debug build writes its debug
+      # information to .pdb files, which ccache cannot cache. CMake reads the
+      # launchers from the environment, so the recipes run unchanged.
+      - name: Set up ccache for the Debug builds in build/ and build-test/
+        if: runner.os == 'macOS'
+        uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
+        with:
+          key: ${{ matrix.os }}
+          max-size: 1G
+          evict-old-files: job
+
+      - name: Hand ccache to CMake as the compiler launcher
+        if: runner.os == 'macOS'
+        run: |
+          echo "CCACHE_DEPEND=1" >> "$GITHUB_ENV"
+          echo "CMAKE_C_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"
+          echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"
+          echo "CMAKE_OBJCXX_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"
+
+      - run: just build
+      - run: just test
+
+      # Saved even when a test fails, so the next run still finds the packages
+      # and libraries this one built.
+      - uses: actions/cache/save@v4
+        if: always() && steps.lockstep-cache.outputs.cache-hit != 'true'
+        with:
+          path: .lockstep-cache
+          key: ${{ steps.lockstep-cache.outputs.cache-primary-key }}
+
+  codehealth:
+    name: Code Health
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jamierpond/CodeHealth@v1
