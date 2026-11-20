@@ -146,6 +146,22 @@
       "usesGitLfs": false
     },
     {
+      "commit": "4e9b368bfc071e97206ea5c6adba68dd0cbf8897",
+      "hash": "d24808a20ae66a97f67f56f72ebcb56a201b3391d052c701012f1b49838030fc",
+      "kind": "git",
+      "name": "stb",
+      "patches": [],
+      "requestedRef": "4e9b368bfc071e97206ea5c6adba68dd0cbf8897",
+      "submoduleSelection": {
+        "isRecursive": true,
+        "isRestricted": false,
+        "paths": []
+      },
+      "submodules": [],
+      "url": "https://github.com/nothings/stb.git",
+      "usesGitLfs": false
+    },
+    {
       "commit": "299e80aeb95024efcd2b316a5623c4ae45934150",
       "hash": "4faf6ea54d4603f0df060f0498a1763c5f483ed3b9dc9af97d846abfcdaf9a24",
       "kind": "git",
@@ -178,6 +194,6 @@
       "usesGitLfs": false
     }
   ],
-  "root": "5ff936570731ce204dfa8c2681493ddd632ab415a04e75929b90da71c359c6de",
+  "root": "1a9de1ec5211c97cc501c6f91f443c5ba5782512114b11c50d91d49500ac8686",
   "version": 1
 }
