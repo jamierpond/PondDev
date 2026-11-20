@@ -12,6 +12,8 @@ jobs:
         include:
           - name: macOS arm64
             os: macos-latest
+          - name: Ubuntu x64
+            os: ubuntu-24.04
           - name: Windows x64
             os: windows-latest
     name: ${{ matrix.name }}
@@ -33,10 +35,18 @@ jobs:
 
       - uses: extractions/setup-just@v2
 
+      - name: Install Ninja, and libcurl headers for eacp's configure
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ninja-build libcurl4-openssl-dev
+
+      - name: Install Ninja
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
       # ccache on macOS only: a Windows Debug build writes its debug
       # information to .pdb files, which ccache cannot cache. CMake reads the
       # launchers from the environment, so the recipes run unchanged.
-      - name: Set up ccache for the Debug builds in build/ and build-test/
+      - name: Set up ccache for the Debug build in build/
         if: runner.os == 'macOS'
         uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
         with:
@@ -52,7 +62,6 @@ jobs:
           echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"
           echo "CMAKE_OBJCXX_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"
 
-      - run: just build
       - run: just test
 
       # Saved even when a test fails, so the next run still finds the packages

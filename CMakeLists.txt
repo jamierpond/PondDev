@@ -63,6 +63,7 @@ if (PROJECT_IS_TOP_LEVEL)
 
     # Set after the packages, so only this project's own targets build with -Werror.
     set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
+    pond_add_line_coverage_counters()
 endif ()
 
 # Matching and usage ordering for search lists: plain functions on strings

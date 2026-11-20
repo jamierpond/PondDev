@@ -1,11 +1,25 @@
 #!/usr/bin/env python3
-"""Which of CowTerm's own code ran, from builds made with
--DCOWTERM_LINE_COVERAGE=ON (just install-coverage). Each instrumented program
+"""Which of an app's own code ran, from builds made with
+-DPOND_LINE_COVERAGE=ON (just install-coverage). Each instrumented program
 adds its counts every minute and at exit to <data folder>/coverage/<id>.profraw,
 one file per build of each program. Counts only map to lines through the
 programs that wrote them, so each build's programs are kept in
 <data folder>/coverage/programs/<installed date>-<hash>/ before an install
 replaces them.
+
+Every command takes the app's settings first:
+
+  line-coverage.py --app NAME --program NAME --installed-in FOLDER
+                   --own-code-folder NAME [--not-own-code-folder NAME]
+                   [--repository FOLDER] <command>
+
+  --program, --installed-in, --own-code-folder and --not-own-code-folder are
+  given once per value. --app is the app's pond data folder name, --program each instrumented
+  program's file name, --installed-in each folder an install puts them in,
+  --own-code-folder each top-level source folder of the app's own code,
+  --not-own-code-folder each folder anywhere in a path that is not, and
+  --repository the app's checkout (default: the current folder), which holds
+  build-coverage/.
 
   line-coverage.py report [--instance NAME]
       Never-run files and functions, largest first, combined over every kept
@@ -25,6 +39,7 @@ import io
 import json
 import platform
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -32,22 +47,20 @@ import tarfile
 import time
 from pathlib import Path
 
-REPOSITORY = Path(__file__).resolve().parent.parent
-HOSTS_FOLDER = REPOSITORY / "build-coverage" / "hosts"
-REPORT_FOLDER = REPOSITORY / "build-coverage" / "report"
+REPOSITORY = None
+HOSTS_FOLDER = None
+REPORT_FOLDER = None
 LOCAL_SET_NAME = "this-machine"
 PROGRAMS_FOLDER_NAME = "programs"
 CAVEAT = ("Code that never ran includes error handling and rare paths: "
           "these are candidates to look at, and you decide what goes.")
-OWN_CODE = re.compile(r"/((?:Lib|Terminal|Daemon|Remote|LineCoverage)/.*)$")
-NOT_OWN_CODE = re.compile(r"lockstep|_deps|/build[^/]*/(?:Lib|Terminal|Daemon|Remote)/|/iOS/|/Tests/|/Bench/|/Fuzz/")
+OWN_CODE = None
+NOT_OWN_CODE = None
 FUNCTIONS_SHOWN = 60
-PROGRAM_NAMES = ["CowTerm", "CowTermDaemon", "ct", "cowtermd"]
-INSTALLED_PROGRAM_FOLDERS = [
-    "~/.local/libexec/cowterm/CowTerm.app/Contents/MacOS",
-    "~/.local/libexec/cowterm",
-    "~/.local/libexec/cowterm-remote",
-]
+APP_NAME = None
+PROGRAM_NAMES = []
+INSTALLED_PROGRAM_FOLDERS = []
+APP_ARGUMENTS = []
 BUILD_HASH_LENGTH = 12
 BUILD_DATE_FORMAT = "%Y-%m-%d-%H%M%S"
 SHOWN_DATE_FORMAT = "%Y-%m-%d %H:%M"
@@ -58,14 +71,15 @@ REGION_FILE_INDEX = 5
 
 def get_coverage_folder(instance):
     if platform.system() == "Darwin":
-        data = Path.home() / "Library/Application Support/pond/CowTerm"
+        data = Path.home() / "Library/Application Support/pond" / APP_NAME
     else:
-        data = Path.home() / ".local/share/pond/CowTerm"
+        data = Path.home() / ".local/share/pond" / APP_NAME
     return data / (f"coverage-{instance}" if instance else "coverage")
 
 
 def run_on_host(host, *arguments):
-    command = ["ssh", "-o", "BatchMode=yes", host, "python3", "-", *arguments]
+    remote_arguments = [shlex.quote(argument) for argument in (*APP_ARGUMENTS, *arguments)]
+    command = ["ssh", "-o", "BatchMode=yes", host, "python3", "-", *remote_arguments]
     with open(__file__, "rb") as script:
         return subprocess.run(command, stdin=script, check=True, capture_output=True).stdout
 
@@ -264,7 +278,7 @@ def print_report(files, functions, place_names):
     ran_functions = sum(entry["ran"] for entry in functions.values())
     print(CAVEAT)
     print(f"From: {', '.join(place_names)}. {ran_functions} of {len(functions)} functions "
-          f"in CowTerm's own code ran.\n")
+          f"in {APP_NAME}'s own code ran.\n")
     unrun_file_paths = print_unrun_files(files)
     print_unrun_functions(functions, unrun_file_paths)
     print("\nPer-line view of each place's newest build:")
@@ -325,8 +339,37 @@ def reset(arguments):
     print(f"[coverage] counts and kept programs deleted {'on ' + arguments.host if arguments.host else 'here'}")
 
 
+def get_folder_pattern(folders):
+    return "|".join(map(re.escape, folders))
+
+
+def apply_app_arguments(arguments):
+    global REPOSITORY, HOSTS_FOLDER, REPORT_FOLDER, OWN_CODE, NOT_OWN_CODE
+    global APP_NAME, PROGRAM_NAMES, INSTALLED_PROGRAM_FOLDERS, APP_ARGUMENTS
+    REPOSITORY = Path(arguments.repository).resolve()
+    HOSTS_FOLDER = REPOSITORY / "build-coverage" / "hosts"
+    REPORT_FOLDER = REPOSITORY / "build-coverage" / "report"
+    own_folders = get_folder_pattern(arguments.own_code_folder)
+    not_own_folders = "".join(f"|/{re.escape(folder)}/" for folder in arguments.not_own_code_folder)
+    OWN_CODE = re.compile(rf"/((?:{own_folders})/.*)$")
+    NOT_OWN_CODE = re.compile(rf"lockstep|_deps|/build[^/]*/(?:{own_folders})/{not_own_folders}")
+    APP_NAME = arguments.app
+    PROGRAM_NAMES = arguments.program
+    INSTALLED_PROGRAM_FOLDERS = arguments.installed_in
+    APP_ARGUMENTS = ["--app", APP_NAME,
+                     *(argument for name in PROGRAM_NAMES for argument in ("--program", name)),
+                     *(argument for folder in INSTALLED_PROGRAM_FOLDERS for argument in ("--installed-in", folder)),
+                     *(argument for folder in arguments.own_code_folder for argument in ("--own-code-folder", folder))]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--app", required=True)
+    parser.add_argument("--program", action="append", required=True)
+    parser.add_argument("--installed-in", action="append", default=[])
+    parser.add_argument("--own-code-folder", action="append", required=True)
+    parser.add_argument("--not-own-code-folder", action="append", default=[])
+    parser.add_argument("--repository", default=".")
     commands = parser.add_subparsers(dest="command", required=True)
     report_command = commands.add_parser("report")
     keep_command = commands.add_parser("keep")
@@ -340,6 +383,7 @@ def main():
     for command in (report_command, keep_command, collect_command, pack_command, reset_command):
         command.add_argument("--instance", default="")
     arguments = parser.parse_args()
+    apply_app_arguments(arguments)
     handlers = {"report": report, "keep": keep, "collect": collect, "pack": pack, "reset": reset}
     handlers[arguments.command](arguments)
 

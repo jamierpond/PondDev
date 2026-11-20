@@ -9,9 +9,9 @@
 #
 #   pond_add_version_test(ct ct) # ctest: `ct --version` prints "ct <semver>..." and exits 0
 #
-# Rudder includes this file, so every app that adds Rudder with lockstep gets
+# PondDev includes this file, so every app that adds PondDev with lockstep gets
 # the function. This file is identical in every pond app that keeps its own
-# copy; change Rudder's, then copy it to them.
+# copy; change PondDev's, then copy it to them.
 
 if (CMAKE_SCRIPT_MODE_FILE AND DEFINED TESTED_EXECUTABLE)
     execute_process(

@@ -1,7 +1,10 @@
-#include "Multiplexer/DataDirectories.h"
+#include <PondApp/DataDirectory.h>
 
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
+#include <string>
+#include <string_view>
 #include <thread>
 
 // clang's coverage runtime, linked in by -fprofile-instr-generate.
@@ -9,14 +12,40 @@ extern "C" void __llvm_profile_set_filename(const char* filenamePattern);
 extern "C" int __llvm_profile_write_file();
 extern "C" void __llvm_profile_reset_counters();
 
-namespace term
+namespace pondapp
 {
 namespace
 {
 constexpr auto countsWriteInterval = std::chrono::minutes {1};
 
+// POND_LINE_COVERAGE_APP_NAME and POND_LINE_COVERAGE_INSTANCE_VARIABLE come from pond_write_line_coverage.
+constexpr auto appName = std::string_view {POND_LINE_COVERAGE_APP_NAME};
+constexpr auto coverageFolderName = std::string_view {"coverage"};
+
 // %m: every run of one executable merges into one file, so each program keeps one.
 constexpr auto countsFileName = "%m.profraw";
+
+std::string getInstanceName()
+{
+#ifdef POND_LINE_COVERAGE_INSTANCE_VARIABLE
+    const auto* name = std::getenv(POND_LINE_COVERAGE_INSTANCE_VARIABLE);
+    return name != nullptr ? std::string {name} : std::string {};
+#else
+    return {};
+#endif
+}
+
+// A named instance counts into coverage-<instance>, beside the normal instance's coverage.
+std::filesystem::path getLineCoverageDirectory()
+{
+    const auto instance = getInstanceName();
+    auto folderName = std::string {coverageFolderName};
+
+    if (!instance.empty())
+        folderName += "-" + instance;
+
+    return getPondAppDataDirectory(appName) / folderName;
+}
 
 void writeCountsEveryInterval()
 {
@@ -45,4 +74,4 @@ struct LineCoverageWriter
 
 const auto lineCoverageWriter = LineCoverageWriter {};
 } // namespace
-} // namespace term
+} // namespace pondapp
