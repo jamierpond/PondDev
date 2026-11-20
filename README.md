@@ -151,12 +151,13 @@ or captured with `$(...)` returns as soon as the program does.
 
 Configure copies `crash-reports.py` into `<build>/PondCrashReports`. The app's
 justfile gives it a `crash-reports` recipe, the name the script's mark-fixed
-lines use:
+lines use, reading it from the build folder `just test` configures (Rudder and
+Grazer use `build-test`):
 
 ```just
 [doc('List the crash reports nobody has marked fixed here and on other machines (list [HOST ...]), or mark one fixed (mark-fixed HOST ID)')]
 crash-reports *arguments:
-    python3 build/PondCrashReports/crash-reports.py --app MyApp {{arguments}}
+    python3 build-test/PondCrashReports/crash-reports.py --app MyApp {{arguments}}
 ```
 
 `list big-cow jamiepond@tamby` reads each host over ssh (`local` is this
