@@ -89,6 +89,30 @@ add_library(FrecencySearch STATIC
 target_include_directories(FrecencySearch PUBLIC Lib)
 target_compile_features(FrecencySearch PUBLIC cxx_std_20)
 
+# Grazer's Go palette ordering (tabs, places, history and the rows for typed
+# text) and the URL rules it needs, here so Grazer and Rudder run one function:
+# Rudder orders Grazer's pages from the materials Grazer hands it.
+add_library(GrazerPalette STATIC
+        Lib/GrazerPalette/Palette.cpp
+        Lib/GrazerPalette/RankingMaterials.cpp
+        Lib/GrazerPalette/Url.cpp)
+target_include_directories(GrazerPalette PUBLIC Lib)
+target_compile_features(GrazerPalette PUBLIC cxx_std_20)
+target_link_libraries(GrazerPalette PUBLIC FrecencySearch Miro)
+
+# CowTerm's palette ordering (sessions and projects by match, usage and
+# learned picks; unread first with nothing typed), here so CowTerm and Rudder
+# run one function: Rudder orders CowTerm's rows from the materials CowTerm
+# hands it.
+add_library(CowTermPalette STATIC
+        Lib/CowTermPalette/HostLabel.cpp
+        Lib/CowTermPalette/PaletteRanking.cpp
+        Lib/CowTermPalette/PaletteUsageEntries.cpp
+        Lib/CowTermPalette/RankingMaterials.cpp)
+target_include_directories(CowTermPalette PUBLIC Lib)
+target_compile_features(CowTermPalette PUBLIC cxx_std_20)
+target_link_libraries(CowTermPalette PUBLIC FrecencySearch Miro)
+
 # A one-line vim search box over a list of rows, so Rudder, Grazer and
 # CowTerm share one set of keys.
 add_library(SearchKeys STATIC Lib/SearchKeys/SearchKeys.cpp)

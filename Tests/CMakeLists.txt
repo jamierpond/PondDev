@@ -1,9 +1,15 @@
 # The tests of the libraries that need no event loop or second process.
 add_executable(PondDevTests
+        CowTermPaletteRankingTests.cpp
+        CowTermPaletteMaterialsTests.cpp
         FrecencySearchTests.cpp
+        GrazerPaletteRankingTests.cpp
+        PaletteSpeedTests.cpp
+        PaletteTests.cpp
         SearchKeysTests.cpp
-        SessionLogTests.cpp)
-target_link_libraries(PondDevTests PRIVATE NanoTest NanoTestMain FrecencySearch SearchKeys SessionLog)
+        SessionLogTests.cpp
+        UrlTests.cpp)
+target_link_libraries(PondDevTests PRIVATE NanoTest NanoTestMain CowTermPalette FrecencySearch GrazerPalette SearchKeys SessionLog)
 
 # The line coverage pipeline's own check (just coverage-check) counts these tests.
 pond_write_line_coverage(PondDevTests APP_NAME PondDevLineCoverageCheck)

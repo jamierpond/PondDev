@@ -15,6 +15,13 @@ which holds only these.
 - `FrecencySearch` (`<FrecencySearch/MatchLevel.h>`, `LearnedPicks.h`, `RowOrder.h`): how
   well a query matches a row, and the order of a search list from how often and
   how recently each row was picked. Plain functions, no storage.
+- `GrazerPalette` (`<GrazerPalette/Palette.h>`, `Url.h`, `RankingMaterials.h`): Grazer's Go
+  palette ordering and the URL rules it needs. `orderPalettePages` runs it on
+  the materials Grazer hands Rudder, so Rudder orders Grazer's pages exactly as
+  Grazer does.
+- `CowTermPalette` (`<CowTermPalette/PaletteRanking.h>`, `RankingMaterials.h`): CowTerm's
+  palette ordering of sessions and projects. `orderPaletteItemsFromMaterials`
+  runs it on the materials CowTerm hands Rudder.
 - `SearchKeys` (`<SearchKeys/SearchKeys.h>`): the one-line vim search box over a list of
   rows, so every app's picker has the same keys. Built on text-buffer's `VimEditor`.
 - `PermissionsPanel` (`<PermissionsPanel/PermissionsPanel.h>`): the Permissions… panel
