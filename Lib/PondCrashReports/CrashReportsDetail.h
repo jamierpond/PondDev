@@ -11,6 +11,9 @@ namespace pondcrashreports::detail
 // <app support>/<program>/Crashes, its getDefaultDatabaseDirectory().
 std::filesystem::path getOldCrashReportsDirectory();
 
+// The name this executable has its own app support folder under (Rudder, CowTermDaemon).
+std::string getProgramName();
+
 // The fault named after the first `--crash-for-testing`, if any.
 std::optional<std::string> findFaultToCrashWithForTesting(int argc, char* argv[]);
 } // namespace pondcrashreports::detail

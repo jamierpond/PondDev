@@ -2,7 +2,7 @@
 # <pond data folder>/<App>/Crashes/<program>. Crashout has a handler on macOS
 # and Windows only; elsewhere the same calls build over CrashReports-None.cpp
 # and do nothing.
-add_library(PondCrashReports STATIC CrashReports.cpp)
+add_library(PondCrashReports STATIC CrashReports.cpp CrashReportGroups.cpp CrashesCommand.cpp)
 
 if (TARGET eacp-crash-reporting)
     target_sources(PondCrashReports PRIVATE CrashReports-Crashout.cpp)
@@ -12,5 +12,5 @@ else ()
 endif ()
 
 target_include_directories(PondCrashReports PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
-target_link_libraries(PondCrashReports PRIVATE PondApp)
+target_link_libraries(PondCrashReports PUBLIC eacp-crash-report PRIVATE PondApp)
 target_compile_features(PondCrashReports PUBLIC cxx_std_20)

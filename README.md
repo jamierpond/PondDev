@@ -167,6 +167,24 @@ crash-reports *arguments:
     python3 build-test/PondCrashReports/crash-reports.py --app MyApp {{arguments}}
 ```
 
+The app's own binary also answers `MyApp crashes list`: it prints this
+machine's unfixed reports grouped the way Sentry groups issues, newest group
+first. Reports are one group when they share the program, the kind (crash or
+hang) and the first three frames in the program's own executable, symbols
+compared without their `+ offset`; a report with no such frame groups by its
+first three frames of any module. It needs no window and no crash handler, so
+`main` calls it straight after `runCrashHandlerIfRequested`:
+
+```cpp
+if (auto exitCode = pondcrashreports::runCrashesCommandIfRequested(
+        {.appName = "MyApp", .otherProgramNames = {"MyAppDaemon"}}, argc, argv))
+    return *exitCode;
+```
+
+`otherProgramNames` lists the app's other programs whose reports from before
+PondDev are still under their own name; every program in the pond folder is
+read anyway. On Linux it builds, finds no reports and prints nothing.
+
 `list big-cow jamiepond@tamby` reads each host over ssh (`local` is this
 machine, the default). An app whose programs wrote reports before PondDev under
 other names passes each with `--program` (`--program CowTerm --program

@@ -35,6 +35,27 @@ struct CrashReportsSettings
     std::string release;
 };
 
+// `<app> crashes` with no subcommand or an unknown one prints the usage and
+// ends the process with this code.
+constexpr auto exitCodeCrashesUsage = 2;
+
+struct CrashesCommandSettings
+{
+    // The app's pond data folder name (pondapp::getPondAppDataDirectory).
+    std::string appName;
+
+    // Other programs of the app whose reports from before PondDev are in
+    // <app support>/<program>/Crashes, such as CowTermDaemon for CowTerm.
+    std::vector<std::string> otherProgramNames;
+};
+
+// `<app> crashes list` prints this machine's crash reports nobody has marked
+// fixed, grouped by where they happened, newest group first, and returns its
+// exit code. nullopt for any other command line. Needs no crash handler, so
+// main() can call it straight after runCrashHandlerIfRequested.
+std::optional<int> runCrashesCommandIfRequested(
+    const CrashesCommandSettings& settings, int argc, char* argv[]);
+
 // Moves the reports this program wrote to <app support>/<program>/Crashes
 // before PondDev into getCrashReportsDirectory, once; starts the crash handler
 // process; then, when the command line holds `--crash-for-testing <fault>`,

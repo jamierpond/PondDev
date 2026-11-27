@@ -23,6 +23,11 @@ std::filesystem::path getOldCrashReportsDirectory()
     return eacp::toStdPath(eacp::FilePath::appSupportDirectory()) / crashesFolderName;
 }
 
+std::string getProgramName()
+{
+    return getOldCrashReportsDirectory().parent_path().filename().string();
+}
+
 std::optional<std::string> findFaultToCrashWithForTesting(int argc, char* argv[])
 {
     for (auto index = 1; index + 1 < argc; ++index)
@@ -37,8 +42,8 @@ std::optional<std::string> findFaultToCrashWithForTesting(int argc, char* argv[]
 
 std::filesystem::path getCrashReportsDirectory(std::string_view appName)
 {
-    const auto programName = detail::getOldCrashReportsDirectory().parent_path().filename();
-    return pondapp::getPondAppDataDirectory(appName) / crashesFolderName / programName;
+    return pondapp::getPondAppDataDirectory(appName) / crashesFolderName
+           / detail::getProgramName();
 }
 
 std::vector<std::string> getArgumentsWithoutCrashForTesting(int argc, char* argv[])
