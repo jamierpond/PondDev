@@ -79,3 +79,16 @@ auto tRelaunchCommandWithArguments = test("Permissions/relaunchCommandPassesOpen
     check(argv[2].find("--args \"$@\"") != std::string::npos);
     check(argv[6] == "permissions");
 };
+
+auto tRelaunchReason = test("Permissions/describeRelaunchReason") = []
+{
+    const auto screenRecording =
+        Info {Kind::screenRecording, "Screen Recording", "", "Screen & System Audio Recording", true, true};
+
+    check(describeRelaunchReason("Rudder", {}).empty(), "nothing to relaunch for");
+    check(describeRelaunchReason("Rudder", {false, {screenRecording}})
+          == "Screen Recording is on. macOS gives it to Rudder only after a relaunch.");
+    check(describeRelaunchReason("Rudder", {true, {screenRecording}})
+          == "Grants reset. Relaunch so Rudder drops the ones it cached.",
+          "a reset wipes the waiting grant too");
+};

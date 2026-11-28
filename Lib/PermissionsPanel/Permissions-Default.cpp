@@ -13,6 +13,11 @@ Status check(Kind)
     return Status::granted;
 }
 
+bool isGrantedButWaitingForRelaunch(Kind)
+{
+    return false;
+}
+
 void request(Kind, bool, std::function<void()> done)
 {
     done();

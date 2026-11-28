@@ -155,7 +155,7 @@ const permissions::Info& PermissionsPanel::selectedInfo() const
 
 bool PermissionsPanel::bannerShown() const
 {
-    return resetDone;
+    return !describeBanner().empty();
 }
 
 void PermissionsPanel::refresh()
@@ -164,9 +164,15 @@ void PermissionsPanel::refresh()
         return;
 
     entries.clear();
+    relaunchReason.grantsWaitingForRelaunch.clear();
 
     for (const auto& grant: settings.grants)
+    {
         entries.push_back({grant.kind, platform::check(grant.kind)});
+
+        if (platform::isGrantedButWaitingForRelaunch(grant.kind))
+            relaunchReason.grantsWaitingForRelaunch.push_back(grant);
+    }
 
     repaint();
 }
@@ -204,7 +210,7 @@ void PermissionsPanel::resetAll()
     }
 
     // macOS forgets them all, so it will prompt again; this process doesn't.
-    resetDone = true;
+    relaunchReason.grantsWereReset = true;
     prompted.clear();
     refresh();
 }
@@ -219,7 +225,7 @@ PermissionsPanel::Layout PermissionsPanel::layout() const
 
     auto at = Layout {};
     at.card = {(localBounds.w - width) / 2.0f,
-               std::max((localBounds.h - height) / 2.0f, 12.0f),
+               std::max((localBounds.h - height) / 2.0f, 0.0f),
                width,
                height};
 
@@ -547,7 +553,7 @@ void PermissionsPanel::paintTitle(UI::Graphics& g, const Rect& card)
 
 std::string PermissionsPanel::describeBanner() const
 {
-    return "Grants reset. Relaunch so " + settings.appName + " drops the ones it cached.";
+    return permissions::describeRelaunchReason(settings.appName, relaunchReason);
 }
 
 void PermissionsPanel::paintBanner(UI::Graphics& g, const Layout& at)

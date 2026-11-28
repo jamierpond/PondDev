@@ -99,4 +99,22 @@ std::vector<std::string> relaunchCommand(int pid,
     argv.insert(argv.end(), openArguments.begin(), openArguments.end());
     return argv;
 }
+
+std::string describeRelaunchReason(const std::string& appName, const RelaunchReason& reason)
+{
+    if (reason.grantsWereReset)
+        return "Grants reset. Relaunch so " + appName + " drops the ones it cached.";
+
+    const auto& waiting = reason.grantsWaitingForRelaunch;
+
+    if (waiting.empty())
+        return {};
+
+    auto names = waiting.front().name;
+
+    for (std::size_t i = 1; i < waiting.size(); ++i)
+        names += " and " + waiting[i].name;
+
+    return names + " is on. macOS gives it to " + appName + " only after a relaunch.";
+}
 } // namespace pond::permissions

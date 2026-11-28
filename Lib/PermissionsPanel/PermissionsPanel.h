@@ -57,9 +57,13 @@ public:
     void show(bool confirmReset = false);
     bool isShown() const { return shown; }
 
+    // What Esc does: stops the once-a-second checks and calls onClosed.
+    void close();
+
     eacp::Callback onClosed = [] {};
 
-    // "Relaunch <app>" after a reset: the app starts
+    // "Relaunch <app>" after a reset, or while a grant waits for a relaunch
+    // (permissions::platform::isGrantedButWaitingForRelaunch): the app starts
     // permissions::platform::startRelaunchAfterExit and quits.
     eacp::Callback onRelaunch = [] {};
 
@@ -92,7 +96,6 @@ private:
     permissions::Status checkGrant(const permissions::Info& grant) const;
     void act(int row);
     void resetAll();
-    void close();
     void cancelOrClose();
     void confirmOrAct();
     void handleConfirmingResetClick(const Layout& at, eacp::UI::Point pos);
@@ -124,7 +127,7 @@ private:
     bool confirmingReset = false;
 
     // Since a reset this process's cached grants are stale until it relaunches.
-    bool resetDone = false;
+    permissions::RelaunchReason relaunchReason;
     std::string error;
     int selected = 0;
     eacp::UI::Point mouse;

@@ -401,6 +401,16 @@ Status check(Kind kind)
     return Status::unknown;
 }
 
+// CGPreflightScreenCaptureAccess answers for this process as it started;
+// the window titles answer for System Settings now.
+bool isGrantedButWaitingForRelaunch(Kind kind)
+{
+    if (kind != Kind::screenRecording)
+        return false;
+
+    return !CGPreflightScreenCaptureAccess() && canSeeOtherAppsWindowTitles();
+}
+
 void request(Kind kind, bool prompted, std::function<void()> done)
 {
     switch (kind)

@@ -86,10 +86,26 @@ std::vector<std::string> relaunchCommand(int pid,
                                          const std::string& scriptName,
                                          const std::vector<std::string>& openArguments = {});
 
+// Why the panel asks for a relaunch.
+struct RelaunchReason
+{
+    bool grantsWereReset = false;
+    // On in System Settings, not yet given to this process.
+    std::vector<Info> grantsWaitingForRelaunch;
+};
+
+// The panel's relaunch banner, or "" when no relaunch is needed.
+std::string describeRelaunchReason(const std::string& appName, const RelaunchReason& reason);
+
 namespace platform
 {
 // Live, never prompts. Cheap except where noted in the .mm.
 Status check(Kind kind);
+
+// On in System Settings, but this process started without it, so it only
+// works after a relaunch. True only for Screen Recording: macOS gives a
+// running app that grant when it next starts.
+bool isGrantedButWaitingForRelaunch(Kind kind);
 
 // The system prompt where there is one, otherwise (or the second time) the
 // System Settings pane. Asynchronous where macOS blocks; `done` runs on the
