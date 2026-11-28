@@ -87,8 +87,26 @@ auto tRelaunchReason = test("Permissions/describeRelaunchReason") = []
 
     check(describeRelaunchReason("Rudder", {}).empty(), "nothing to relaunch for");
     check(describeRelaunchReason("Rudder", {false, {screenRecording}})
-          == "Screen Recording is on. macOS gives it to Rudder only after a relaunch.");
+          == "Turned Screen Recording on in System Settings? macOS gives it to Rudder only "
+             "after a relaunch.",
+          "never claims the grant is on");
     check(describeRelaunchReason("Rudder", {true, {screenRecording}})
           == "Grants reset. Relaunch so Rudder drops the ones it cached.",
           "a reset wipes the waiting grant too");
+};
+
+auto tScreenRecordingOpensSettings = test("Permissions/Screen Recording's button always opens Settings") = []
+{
+    const auto screenRecording =
+        Info {Kind::screenRecording, "Screen Recording", "", "Screen & System Audio Recording", true, true};
+
+    check(actionLabel(screenRecording, Status::notGranted, false) == "Open Settings",
+          "a denied record gets no prompt, so the button must not promise one");
+    check(actionLabel(screenRecording, Status::granted, false).empty());
+};
+
+auto tOnlyScreenRecordingWaitsForRelaunch = test("Permissions/only Screen Recording takes effect after a relaunch") = []
+{
+    check(takesEffectOnlyAfterRelaunch(Kind::screenRecording));
+    check(!takesEffectOnlyAfterRelaunch(Kind::accessibility));
 };

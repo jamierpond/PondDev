@@ -315,47 +315,20 @@ void requestFilesAndFolders(bool prompted, std::function<void()> done)
         });
 }
 
-// CGPreflightScreenCaptureAccess keeps its first answer for the life of the
-// process, so a grant made while the panel is open would never show. Window
-// titles of other apps are only visible with the grant, and that is live.
-bool canSeeOtherAppsWindowTitles()
-{
-    auto* windows = (NSArray*) CFBridgingRelease(CGWindowListCopyWindowInfo(
-        kCGWindowListOptionOnScreenOnly, kCGNullWindowID));
-    const auto ownPid = getpid();
-
-    for (NSDictionary* window in windows)
-    {
-        auto* ownerPid = (NSNumber*) window[(__bridge NSString*) kCGWindowOwnerPID];
-        auto* owner = (NSString*) window[(__bridge NSString*) kCGWindowOwnerName];
-        auto* title = (NSString*) window[(__bridge NSString*) kCGWindowName];
-
-        if (ownerPid.intValue == ownPid || [owner isEqualToString:@"Window Server"]
-            || [owner isEqualToString:@"Dock"])
-            continue;
-
-        if (title.length > 0)
-            return true;
-    }
-
-    return false;
-}
-
 Status screenRecordingStatus()
 {
-    return statusFromGranted(CGPreflightScreenCaptureAccess() || canSeeOtherAppsWindowTitles());
+    return statusFromGranted(CGPreflightScreenCaptureAccess());
 }
 
-void requestScreenRecording(bool prompted)
+// With a denied record CGRequestScreenCaptureAccess shows nothing, and macOS
+// shows its prompt once per app ever, so every Grant also opens the pane. The
+// request first adds the app to the pane's list when it has no record yet.
+void requestScreenRecording()
 {
-    // CGRequestScreenCaptureAccess shows macOS's prompt the first time only.
-    if (prompted || CGPreflightScreenCaptureAccess())
-    {
-        openSettings(Kind::screenRecording);
-        return;
-    }
+    if (!CGPreflightScreenCaptureAccess())
+        CGRequestScreenCaptureAccess();
 
-    CGRequestScreenCaptureAccess();
+    openSettings(Kind::screenRecording);
 }
 
 void requestNotifications(bool prompted, std::function<void()> done)
@@ -401,16 +374,6 @@ Status check(Kind kind)
     return Status::unknown;
 }
 
-// CGPreflightScreenCaptureAccess answers for this process as it started;
-// the window titles answer for System Settings now.
-bool isGrantedButWaitingForRelaunch(Kind kind)
-{
-    if (kind != Kind::screenRecording)
-        return false;
-
-    return !CGPreflightScreenCaptureAccess() && canSeeOtherAppsWindowTitles();
-}
-
 void request(Kind kind, bool prompted, std::function<void()> done)
 {
     switch (kind)
@@ -431,7 +394,7 @@ void request(Kind kind, bool prompted, std::function<void()> done)
             requestNotifications(prompted, std::move(done));
             return;
         case Kind::screenRecording:
-            requestScreenRecording(prompted);
+            requestScreenRecording();
             break;
         case Kind::systemAudioRecording:
             openSettings(kind);

@@ -55,12 +55,21 @@ namespace
 {
 bool canAskDirectly(const Info& grant, Status status, bool prompted)
 {
+    // Its request always opens System Settings too (Permissions-macOS.mm).
+    if (grant.kind == Kind::screenRecording)
+        return false;
+
     if (!grant.canPrompt || prompted)
         return false;
 
     return status != Status::denied;
 }
 } // namespace
+
+bool takesEffectOnlyAfterRelaunch(Kind kind)
+{
+    return kind == Kind::screenRecording;
+}
 
 std::string actionLabel(const Info& grant, Status status, bool prompted)
 {
@@ -105,16 +114,17 @@ std::string describeRelaunchReason(const std::string& appName, const RelaunchRea
     if (reason.grantsWereReset)
         return "Grants reset. Relaunch so " + appName + " drops the ones it cached.";
 
-    const auto& waiting = reason.grantsWaitingForRelaunch;
+    const auto& setUp = reason.grantsSetUpThisRun;
 
-    if (waiting.empty())
+    if (setUp.empty())
         return {};
 
-    auto names = waiting.front().name;
+    auto names = setUp.front().name;
 
-    for (std::size_t i = 1; i < waiting.size(); ++i)
-        names += " and " + waiting[i].name;
+    for (std::size_t i = 1; i < setUp.size(); ++i)
+        names += " and " + setUp[i].name;
 
-    return names + " is on. macOS gives it to " + appName + " only after a relaunch.";
+    return "Turned " + names + " on in System Settings? macOS gives it to " + appName
+           + " only after a relaunch.";
 }
 } // namespace pond::permissions

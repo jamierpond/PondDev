@@ -158,20 +158,30 @@ bool PermissionsPanel::bannerShown() const
     return !describeBanner().empty();
 }
 
+bool PermissionsPanel::isSetUpButWaitingForRelaunch(const permissions::Info& grant,
+                                                    Status status) const
+{
+    if (status == Status::granted || !prompted.contains(grant.kind))
+        return false;
+
+    return permissions::takesEffectOnlyAfterRelaunch(grant.kind);
+}
+
 void PermissionsPanel::refresh()
 {
     if (!shown)
         return;
 
     entries.clear();
-    relaunchReason.grantsWaitingForRelaunch.clear();
+    relaunchReason.grantsSetUpThisRun.clear();
 
     for (const auto& grant: settings.grants)
     {
-        entries.push_back({grant.kind, platform::check(grant.kind)});
+        const auto status = platform::check(grant.kind);
+        entries.push_back({grant.kind, status});
 
-        if (platform::isGrantedButWaitingForRelaunch(grant.kind))
-            relaunchReason.grantsWaitingForRelaunch.push_back(grant);
+        if (isSetUpButWaitingForRelaunch(grant, status))
+            relaunchReason.grantsSetUpThisRun.push_back(grant);
     }
 
     repaint();

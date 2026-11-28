@@ -62,8 +62,8 @@ public:
 
     eacp::Callback onClosed = [] {};
 
-    // "Relaunch <app>" after a reset, or while a grant waits for a relaunch
-    // (permissions::platform::isGrantedButWaitingForRelaunch): the app starts
+    // "Relaunch <app>" after a reset, or after setting up a grant that takes
+    // effect only after a relaunch (Screen Recording): the app starts
     // permissions::platform::startRelaunchAfterExit and quits.
     eacp::Callback onRelaunch = [] {};
 
@@ -93,6 +93,8 @@ private:
     const permissions::Info& selectedInfo() const;
 
     void refresh();
+    bool isSetUpButWaitingForRelaunch(const permissions::Info& grant,
+                                      permissions::Status status) const;
     permissions::Status checkGrant(const permissions::Info& grant) const;
     void act(int row);
     void resetAll();
